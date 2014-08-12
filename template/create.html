@@ -93,7 +93,7 @@
     				return
     			}
 
-    			$.post("/f/create", 
+    			$.post("/create", 
     			{
     				name:$("#input_feature_name").val(),
                     desc:$("#input_feature_desc").val()
@@ -102,7 +102,7 @@
 
     				var o=JSON.parse(data);
 
-                    window.location.href="/f/" + o.id + "/edit";
+                    window.location.href="/" + o.id + "/edit";
 
     			});
 

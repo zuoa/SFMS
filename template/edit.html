@@ -8,7 +8,7 @@
 	<meta name="description" content="特性进度">
 	<meta name="author" content="y00486">
 
-	<title>创建任务</title>
+	<title>修改任务</title>
 
 	<!-- Bootstrap Core CSS -->
 	<link href="{{ static_url("css/bootstrap.min.css") }}" rel="stylesheet">
@@ -129,13 +129,13 @@
     			});
 
 
-    			$.post("/f/" + $("#table_tasks").data("id") + "/edit", 
+    			$.post("/" + $("#table_tasks").data("id"), 
     			{
+                    action:"modify",
     				tasks:JSON.stringify(tasks)
     			}, 
     			function(data) {
-    				
-
+    				window.location.href="/all";
     			});
 
     		});

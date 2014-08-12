@@ -37,22 +37,35 @@ class CreateHandler(BaseHandler):
 
 
 
+class AllHandler(BaseHandler):
+    def get(self):
+        features = self.db.query("SELECT * from features")
+        for i in range(0, len(features)):
+            features[i]['tasks'] = self.db.query("SELECT * from tasks where feature_id=%s", features[i].get('id'))
+
+        self.render('main.html', features = features)
+
 class FeatureHandler(BaseHandler):
     def get(self, id):
         f = self.db.query("SELECT * from features where id=%s", id)[0]
         t = self.db.query("SELECT * from tasks where feature_id=%s", id)
-        self.render('feature.html', feature_name=f.get("name"), feature_desc="", tasks=t)
+        self.render('feature.html', feature_id=id,feature_name=f.get("name"), feature_desc="", tasks=t)
 
     def post(self, id):
-        tasks = json_decode(self.get_argument('tasks'))
+        action = self.get_argument('action')
 
-        for t in tasks:
-            exist = self.db.query('SELECT * FROM tasks WHERE feature_id=%s AND device=%s', id, t.get("device"))
-            if  exist:
-                self.db.execute('UPDATE tasks SET progress=%s, owner=%s, priority=%s  WHERE feature_id=%s AND device=%s', t.get("progress", 0), t.get("owner"), t.get("priority"), id, t.get("device"))
-            else:
-                self.db.execute('INSERT INTO tasks (feature_id, progress, device, owner, priority) VALUES(%s, %s, %s, %s, %s)', id, t.get("progress", 0), t.get("device"), t.get("owner"), t.get("priority"))
+        if action == "modify":
+            tasks = json_decode(self.get_argument('tasks'))
 
+            for t in tasks:
+                exist = self.db.query('SELECT * FROM tasks WHERE feature_id=%s AND device=%s', id, t.get("device"))
+                if  exist:
+                    self.db.execute('UPDATE tasks SET progress=%s, owner=%s, priority=%s  WHERE feature_id=%s AND device=%s', t.get("progress", 0), t.get("owner"), t.get("priority"), id, t.get("device"))
+                else:
+                    self.db.execute('INSERT INTO tasks (feature_id, progress, device, owner, priority) VALUES(%s, %s, %s, %s, %s)', id, t.get("progress", 0), t.get("device"), t.get("owner"), t.get("priority"))
+        elif action == "delete":
+            self.db.execute('DELETE  FROM `tasks` WHERE `feature_id`=%s', id)
+            self.db.execute('DELETE  FROM `features` WHERE `id`=%s', id)
 
 class EditHandler(BaseHandler):
     def get(self, id):
@@ -80,17 +93,6 @@ class EditHandler(BaseHandler):
             t['priority_option'] = priority_option
         self.render('edit.html', feature_id=id, feature_name=f.get("name"), feature_desc=f.get("desc"), tasks=tasks)
 
-    def post(self, id):
-        tasks = json_decode(self.get_argument('tasks'))
-
-        for t in tasks:
-            exist = self.db.query('SELECT * FROM tasks WHERE feature_id=%s AND device=%s', id, t.get("device"))
-            if  exist:
-                self.db.execute('UPDATE tasks SET progress=%s, owner=%s, priority=%s  WHERE feature_id=%s AND device=%s', t.get("progress", 0), t.get("owner"), t.get("priority"), id, t.get("device"))
-            else:
-                self.db.execute('INSERT INTO tasks (feature_id, progress, device, owner, priority) VALUES(%s, %s, %s, %s, %s)', id, t.get("progress", 0), t.get("device"), t.get("owner"), t.get("priority"))
-
-
 
 
 class Application(web.Application):
@@ -106,9 +108,10 @@ class Application(web.Application):
         )
 
         handlers = [
-            (r"/f/create", CreateHandler),
-            (r"/f/([0-9]+)", FeatureHandler),
-            (r"/f/([0-9]+)/edit", EditHandler)
+            (r"/create", CreateHandler),
+            (r"/([0-9]+)", FeatureHandler),
+            (r"/([0-9]+)/edit", EditHandler),
+            (r"/all", AllHandler)
         ]
 
         web.Application.__init__(self, handlers, **settings)
