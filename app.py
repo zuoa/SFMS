@@ -18,6 +18,21 @@ class BaseHandler(web.RequestHandler):
     def getMembers(self):
         return self.db.query('SELECT * FROM members')
 
+class AppCreateHandler(BaseHandler):
+    def get(self):
+        self.render('app_create.html')
+
+    def post(self):
+        name = self.get_argument('name')
+
+        r = {}
+        id = self.db.execute_lastrowid('INSERT INTO `apps` (`name`) VALUES(%s)', name)
+        r['id'] = id
+        self.write(json_encode(r))
+class AppHandler(BaseHandler):
+    def get(self):
+        apps = self.db.query("SELECT * from apps")
+        self.render('apps.html', apps=apps)
 
 class CreateHandler(BaseHandler):
     def get(self):
@@ -49,16 +64,23 @@ class FeatureHandler(BaseHandler):
     def get(self, id):
         f = self.db.query("SELECT * from features where id=%s", id)[0]
         t = self.db.query("SELECT * from tasks where feature_id=%s", id)
-        self.render('feature.html', feature_id=id,feature_name=f.get("name"), feature_desc="", tasks=t)
+        self.render('feature.html', feature_id=id,feature_name=f.get("name"), feature_desc=f.get("desc"), tasks=t)
 
     def post(self, id):
         action = self.get_argument('action')
 
         if action == "modify":
             tasks = json_decode(self.get_argument('tasks'))
+            name = self.get_argument('name')
+            desc = self.get_argument('desc')
+            self.db.execute('UPDATE features SET `name`=%s, `desc`=%s WHERE `id`=%s', name, desc, id)
 
             for t in tasks:
                 exist = self.db.query('SELECT * FROM tasks WHERE feature_id=%s AND device=%s', id, t.get("device"))
+
+                p = int(t.get("progress", 0))
+                if p >100:
+                    t["progress"] = 100
                 if  exist:
                     self.db.execute('UPDATE tasks SET progress=%s, owner=%s, priority=%s  WHERE feature_id=%s AND device=%s', t.get("progress", 0), t.get("owner"), t.get("priority"), id, t.get("device"))
                 else:
@@ -108,6 +130,8 @@ class Application(web.Application):
         )
 
         handlers = [
+            (r"/app", AppHandler),
+            (r"/app/create", AppCreateHandler),
             (r"/create", CreateHandler),
             (r"/([0-9]+)", FeatureHandler),
             (r"/([0-9]+)/edit", EditHandler),
